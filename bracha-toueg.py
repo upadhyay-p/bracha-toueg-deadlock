@@ -8,6 +8,9 @@ class Node:
 		self.In = []
 		self.initiator = False
 
+	def setInitiator(self):
+		self.initiator = True
+
 	def isDeadlockFree(self):
 		for i in self.Out:
 			if i is not "DONE":
@@ -17,15 +20,15 @@ class Node:
 
 	def addOut(self,u):
 		self.Out.append(u)
-		print("adding outgoing request edge "+str(self.id)+"-"+str(u.id))
+		# print("adding outgoing request edge "+str(self.id)+"-"+str(u.id))
 		self.requests+=1
 
 	def addIn(self,u):
 		self.In.append(u)
-		print("adding incoming request edge "+str(self.id)+"-"+str(u.id))
+		# print("adding incoming request edge "+str(self.id)+"-"+str(u.id))
 		# pass
 
-	def notify(self,):
+	def notify(self):
 		self.notified = True
 		for p in self.Out:
 			if p is not "DONE":
@@ -35,7 +38,7 @@ class Node:
 
 	def grant(self):
 		self.free = True
-		print("Freeing "+str(self.id))
+		# print("Freeing "+str(self.id))
 		for p in self.In:
 			if p is not "ACK":
 				self.message(self, p, "GRANT")
@@ -44,7 +47,8 @@ class Node:
 		if msg is "NOTIFY":
 			if reciever.notified is False:
 				reciever.notify()
-				self.message(reciever, sender, "DONE")
+			self.message(reciever, sender, "DONE")
+
 		elif msg is "GRANT":
 			if reciever.requests > 0:
 				reciever.requests-=1
@@ -57,6 +61,7 @@ class Node:
 				if reciever.Out[i] == sender:
 					reciever.Out[i] = "DONE"
 					break
+
 		elif msg is "ACK":
 			for i in range(len(reciever.In)):
 				if reciever.In[i] is sender:
@@ -69,14 +74,13 @@ lines = file.readlines()
 numberOfNodes = int(lines[0])
 initiator = int(lines[1])
 lines = lines[2:]
+
 dict={}
 for i in range(numberOfNodes):
 	dict[i+1] = Node(i+1)
-	if i+1==initiator:
-		dict[i+1].initiator=True
 
-# dict[initiator].setInitiator()
-# print(dict[initiator])
+dict[initiator].setInitiator()
+
 for i in lines:
 	[u,v] = i.split(" ")
 	u = int(u)
@@ -88,5 +92,3 @@ for i in lines:
 dict[initiator].notify()
 
 print("Is "+str(initiator)+ " deadlock free? "+ str(dict[initiator].isDeadlockFree()))
-# for every node Node object is created
-# 
