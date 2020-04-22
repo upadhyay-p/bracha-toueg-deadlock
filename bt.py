@@ -23,7 +23,7 @@ class Node:
 
 	def initiate(self):
 		self.initiator = True
-		self.notify()
+		self.notify(self.id)
 
 	def checkTermination(self):
 		if self.requests==0 and self.free==False:
@@ -33,14 +33,14 @@ class Node:
 				return False
 		return True
 	def allDone(self):
-		print("allDone called,,,,,"+str(self.Out)+"...by P"+str(self.id))
+		# print("allDone called,,,,,"+str(self.Out)+"...by P"+str(self.id))
 		for i in self.Out:
 			if i!="DONE":
 				return False
 		return True
 	def listen(self):
 		msg = comm.recv(source=MPI.ANY_SOURCE)
-		print("P"+str(msg[0])+" sent P"+str(self.id)+" msg = "+str(msg))
+		# print("P"+str(msg[0])+" sent P"+str(self.id)+" msg = "+str(msg))
 		self.handleMsg(msg)
 
 	def handleMsg(self,msg):
@@ -49,21 +49,25 @@ class Node:
 		# print(str(self.id)+"<====="+str(msg[0])+" msgRCVD:"+msg[1])
 
 		if msg[1]=="NOTIFY":
+			if self.notified==True:
+				# print(str(self.id)+"=====>"+str(msg[0])+" msgSENT:DONE")
+				comm.send([self.id, "DONE"], dest = sender-1)
+				return
 			if self.notified==False:
-				self.notify()
+				self.notify(self.id)
 			while self.allDone()==False:
 				msg = comm.recv()
 				self.handleMsg(msg)
-			print("await oberrrrrrrr for P"+str(self.id))
-			print(str(self.id)+"=====>"+str(msg[0])+" msgSENT:DONE")
+			# print("await oberrrrrrrr for P"+str(self.id))
+			# print(str(self.id)+"=====>"+str(msg[0])+" msgSENT:DONE")
 			comm.send([receiver, "DONE"], dest = sender-1)
 		if msg[1]=="GRANT":
 			if self.requests>0:
 				self.requests-=1
 				if self.requests==0:
-					print("iski req ==0 P"+str(self.id))
+					# print("iski req ==0 P"+str(self.id))
 					self.grant()
-				print(str(self.id)+"=====>"+str(msg[0])+" msgSENT:ACK")
+				# print(str(self.id)+"=====>"+str(msg[0])+" msgSENT:ACK")
 				comm.send([receiver, "ACK"], dest = sender-1)		
 			
 		if msg[1]=="DONE":
@@ -83,13 +87,13 @@ class Node:
 		# return "CONTINUE"
 
 
-	def notify(self):
+	def notify(self,sender):
 		if self.notified==False:
 			self.notified = True
 			Out = self.Out
 			for i in range(len(Out)):
 				if Out[i]!="DONE":
-					print(str(self.id)+"=====>"+str(Out[i])+" msgSENT:NOTIFY")
+					# print(str(self.id)+"=====>"+str(Out[i])+" msgSENT:NOTIFY")
 					comm.send([self.id,"NOTIFY"], dest = Out[i]-1)
 				# self.listen()
 
@@ -97,12 +101,12 @@ class Node:
 				self.grant()
 
 	def grant(self):
-		print("P"+str(rank+1)+" called grant()")
+		# print("P"+str(rank+1)+" called grant()")
 		self.free = True
 		In = self.In
 		for i in range(len(In)):
 			if In[i]!="ACK":
-				print(str(self.id)+"=====>"+str(In[i])+" msgSENT:GRANT")
+				# print(str(self.id)+"=====>"+str(In[i])+" msgSENT:GRANT")
 				comm.send([self.id,"GRANT"], dest = In[i]-1)
 				# self.listen()
 
@@ -128,6 +132,7 @@ if rank+1==initiator:
 # 	nodes[rank+1].listen()
 
 while True:
+	nodes[rank+1].listen()
 	if rank+1 == initiator and nodes[rank+1].allDone():
 		if nodes[initiator].free==True:
 			print("***No deadlock***")
@@ -138,8 +143,6 @@ while True:
 				comm.send([initiator,"TERMINATE"],dest=i)
 		break
 
-
-	nodes[rank+1].listen()
 		# for i in range(comm.Get_size()):
 		# 	if i!=rank:
 		# 		comm.send([initiator,"TERMINATE"],dest=i)
